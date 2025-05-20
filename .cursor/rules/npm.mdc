@@ -1,0 +1,6 @@
+---
+description: When running npm commands
+globs:
+alwaysApply: false
+---
+This project contains 2 npm applications in the 2 root directories.  A mastral agent server in `mastra` , and a vite front end in `app` folder.  Please issue npm commands from the correct directory.

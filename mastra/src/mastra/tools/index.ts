@@ -100,22 +100,3 @@ function getWeatherCondition(code: number): string {
   };
   return conditions[code] || 'Unknown';
 }
-
-export const setMapLocation = createTool({
-  id: 'setMapLocation',
-  description: 'Set the map location on the frontend',
-  inputSchema: z.object({
-    latitude: z.number().describe('Latitude'),
-    longitude: z.number().describe('Longitude'),
-  }),
-  outputSchema: z.object({
-    latitude: z.number(),
-    longitude: z.number(),
-  }),
-  execute: async ({ context }) => {
-    return {
-      latitude: context.latitude,
-      longitude: context.longitude,
-    };
-  },
-});
