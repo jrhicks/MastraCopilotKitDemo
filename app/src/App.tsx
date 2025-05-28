@@ -2,12 +2,10 @@ import { CopilotKit } from "@copilotkit/react-core";
 import { CopilotChat } from "@copilotkit/react-ui";
 import "@copilotkit/react-ui/styles.css";
 import { MapPanel } from './components/MapPanel'
-import { CopilotActions } from './components/CopilotActions';
 
 function App() {
   return (
     <CopilotKit runtimeUrl="http://localhost:4111/copilotkit" agent="weatherAgent">
-      <CopilotActions />
       <div className="flex h-screen">
         {/* Left: Chat */}
         <div className="w-1/2 p-4 border-r border-gray-200 flex flex-col">

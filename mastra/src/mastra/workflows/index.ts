@@ -1,6 +1,6 @@
 import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
-import { Step, Workflow } from '@mastra/core/workflows';
+import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { z } from 'zod';
 
 const llm = openai('gpt-4o');
@@ -34,7 +34,7 @@ const agent = new Agent({
           Note: [relevant weather consideration]
 
         🏠 INDOOR ALTERNATIVES
-        • [Activity Name] - [Brief description including specific venue]
+        • [Activity Name] - [Brief description including venue]
           Ideal for: [weather condition that would trigger this alternative]
 
         ⚠️ SPECIAL CONSIDERATIONS
@@ -64,15 +64,15 @@ const forecastSchema = z.array(
   }),
 );
 
-const fetchWeather = new Step({
+const fetchWeather = createStep({
   id: 'fetch-weather',
   description: 'Fetches weather forecast for a given city',
   inputSchema: z.object({
     city: z.string().describe('The city to get the weather for'),
   }),
   outputSchema: forecastSchema,
-  execute: async ({ context }) => {
-    const triggerData = context?.getStepResult<{ city: string }>('trigger');
+  execute: async ({ inputData }) => {
+    const triggerData = inputData;
 
     if (!triggerData) {
       throw new Error('Trigger data not found');
@@ -115,19 +115,19 @@ const fetchWeather = new Step({
   },
 });
 
-const planActivities = new Step({
+const planActivities = createStep({
   id: 'plan-activities',
   description: 'Suggests activities based on weather conditions',
-  execute: async ({ context, mastra }) => {
-    const forecast = context?.getStepResult(fetchWeather);
+  inputSchema: forecastSchema,
+  outputSchema: z.object({ activities: z.string() }),
+  execute: async ({ inputData }) => {
+    const forecast = inputData;
 
     if (!forecast || forecast.length === 0) {
       throw new Error('Forecast data not found');
     }
 
-    const prompt = `Based on the following weather forecast for ${forecast[0]?.location}, suggest appropriate activities:
-      ${JSON.stringify(forecast, null, 2)}
-      `;
+    const prompt = `Based on the following weather forecast for ${forecast[0]?.location}, suggest appropriate activities:\n${JSON.stringify(forecast, null, 2)}`;
 
     const response = await agent.stream([
       {
@@ -139,7 +139,6 @@ const planActivities = new Step({
     let activitiesText = '';
 
     for await (const chunk of response.textStream) {
-      process.stdout.write(chunk);
       activitiesText += chunk;
     }
 
@@ -171,15 +170,18 @@ function getWeatherCondition(code: number): string {
   return conditions[code] || 'Unknown';
 }
 
-const weatherWorkflow = new Workflow({
-  name: 'weather-workflow',
-  triggerSchema: z.object({
+const weatherWorkflow = createWorkflow({
+  id: 'weather-workflow',
+  inputSchema: z.object({
     city: z.string().describe('The city to get the weather for'),
   }),
+  outputSchema: z.object({
+    activities: z.string(),
+  }),
+  steps: [fetchWeather, planActivities],
 })
-  .step(fetchWeather)
-  .then(planActivities);
-
-weatherWorkflow.commit();
+  .then(fetchWeather)
+  .then(planActivities)
+  .commit();
 
 export { weatherWorkflow };
